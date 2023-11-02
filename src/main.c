@@ -6,26 +6,164 @@
 /*   By: kilchenk <kilchenk@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/10/24 16:52:55 by kilchenk          #+#    #+#             */
-/*   Updated: 2023/11/01 18:59:23 by kilchenk         ###   ########.fr       */
+/*   Updated: 2023/11/02 19:54:49 by kilchenk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../inc/philo.h"
+
+//parse
+void	join_threads(t_philo *p)
+{
+	int	i;
+
+	i = -1;
+	while (i++ < p->param->philo_nb)
+		pthread_join(p[i].thread, (void *)&p[i]);
+}
+
+//utils
+void	free_all(t_philo *p)
+{
+	int	i;
+
+	i = -1;
+	while (i++ < p->param->philo_nb)
+		pthread_mutex_destroy(p[i].forkl);
+	pthread_mutex_destroy(p->param->print);
+	free(p->param->print);
+	free(p->param->fork);
+	free(p->param);
+	free(p);
+}
+
+//check
+int	check_death(t_philo *p)
+{
+	long int	now;
+
+	pthread_mutex_lock(p->param->print);
+	now = current_time() - p->meal;
+	if (now >= p->param->dead_time)
+	{
+		pthread_mutex_unlock(p->param->print);
+		print(p, 5);
+		pthread_mutex_unlock(p->forkl);
+		pthread_mutex_unlock(p->forkr);
+		return (1);
+	}
+	pthread_mutex_unlock(p->param->print);
+	return (0);
+}
+
+//check
+void	check_treads(t_philo *p)
+{
+	int	i;
+
+	while (!p->param->ready)
+		continue ;
+	while (!p->param->over)
+	{
+		i = -1;
+		while (i++ < p->param->philo_nb)
+		{
+			if (check_death(&p[i]))
+				p->param->over = 1;
+		}
+		if (p->param->eated == p->param->philo_nb)
+			p->param->over = 1;
+	}
+	return ;
+}
+
+//utils
+int	ft_atoi(const char *nptr)
+{
+	int	sign;
+	int	i;
+	int	sum;
+
+	sum = 0;
+	sign = 1;
+	i = 0;
+	while ((nptr[i] >= 9 && nptr[i] <= 13) || nptr[i] == ' ')
+		i++;
+	if (nptr[i] == '-' || nptr[i] == '+')
+	{
+		if (nptr[i] == '-')
+			sign = -1;
+		i++;
+	}
+	while (nptr[i] != '\0' && nptr[i] >= '0' && nptr[i] <= '9')
+	{
+		sum *= 10;
+		sum += nptr[i] - '0';
+		i++;
+	}
+	sum *= sign;
+	return (sum);
+}
+
+//utils
+void	print(t_philo *p, int i)
+{
+	pthread_mutex_lock(p->param->print);
+	if (p->param->over)
+	{
+		pthread_mutex_unlock(p->param->print);
+		return ;
+	}
+	if (i == 1)
+		printf("%s%llu %d has taken left fork%s\n", PURPLE,
+			current_time() - p->start, p->id, RESET);
+	else if (i == 2)
+		printf("%s%llu %d is eatting%s\n", GREEN, current_time() - p->start,
+			p->id, RESET);
+	else if (i == 3)
+		printf("%s%llu %d is sleeping%s\n", BLUE, current_time() - p->start,
+			p->id, RESET);
+	else if (i == 4)
+		printf("%s%llu %d is thinking%s\n", YELLOW, current_time() - p->start,
+			p->id, RESET);
+	else if (i == 5)
+		printf("%s%llu %d died %s\n", RED, current_time() - p->start,
+			p->id, RESET);
+	else if (i == 6)
+		printf("%s%llu %d has taken right fork%s\n", PINK,
+			current_time() - p->start, p->id, RESET);
+	pthread_mutex_unlock(p->param->print);
+}
 
 //utils
 void	ft_usleep(long int time)
 {
 	long int	start_time;
 
-	start_time = time_now();
-	while ((time_now() - start_time) < (unsigned long long) time)
+	start_time = current_time();
+	while ((current_time() - start_time) < (unsigned long long) time)
 		usleep(150);
 }
 
 //routine
-void	*routine(void)
+void	ft_eat(t_philo *p)
 {
-	void	*phil;
+	pthread_mutex_lock(p->forkl);
+	print(p, 1);
+	pthread_mutex_lock(p->forkr);
+	print(p, 6);
+	p->meal = current_time();
+	p->iter++;
+	print(p, 2);
+	ft_usleep(p->param->eat_time);
+	pthread_mutex_unlock(p->forkl);
+	pthread_mutex_unlock(p->forkr);
+}
+
+
+//routine
+void	*routine(void *phil)
+{
 	t_philo	*p;
 
 	p = (t_philo *)phil;
@@ -35,7 +173,7 @@ void	*routine(void)
 		ft_usleep(p->param->eat_time * 0.9 + 1);
 	while (!(p->param->over))
 	{
-		//eat func
+		ft_eat(p);
 		pthread_mutex_lock(p->param->print);
 		if (p->param->check_sum && p->iter
 			== p->param->eat_sum)
@@ -45,11 +183,11 @@ void	*routine(void)
 			return (NULL);
 		}
 		pthread_mutex_unlock(p->param->print);
-		//print func
+		print(p, 3);
 		ft_usleep(p->param->sleep_time);
-		//print func
+		print(p, 4);
 	}
-
+	return (NULL);
 }
 
 //utils
@@ -93,6 +231,7 @@ void	init_threads(t_philo *p, t_data *param)
 		pthread_mutex_init(p[i].forkl, NULL);
 	pthread_mutex_init(param->print, NULL);
 	create_threads(p);
+	check_treads(p);
 }
 
 //parse
@@ -157,45 +296,19 @@ void	error_output(void)
 	printf("[number_of_times_each_philosopher_must_eat]\n");
 }
 
-//utils
-int	ft_atoi(const char *nptr)
-{
-	int	sign;
-	int	i;
-	int	sum;
 
-	sum = 0;
-	sign = 1;
-	i = 0;
-	while ((nptr[i] >= 9 && nptr[i] <= 13) || nptr[i] == ' ')
-		i++;
-	if (nptr[i] == '-' || nptr[i] == '+')
-	{
-		if (nptr[i] == '-')
-			sign = -1;
-		i++;
-	}
-	while (nptr[i] != '\0' && nptr[i] >= '0' && nptr[i] <= '9')
-	{
-		sum *= 10;
-		sum += nptr[i] - '0';
-		i++;
-	}
-	sum *= sign;
-	return (sum);
-}
-
-//chek
+//check
 int	is_digit(char c)
 {
 	return (c >= '0' && c <= '9');
 }
 
-//chek
+//check
 int	arg_is_number(char *argv)
 {
 	int	i;
 
+	i = 0;
 	while (argv[i] && is_digit(argv[i]))
 		i++;
 	if (argv[i] != '\0' && !is_digit(argv[i]))
@@ -203,7 +316,7 @@ int	arg_is_number(char *argv)
 	return (1);
 }
 
-//chek
+//check
 int	check_input(char **argv)
 {
 	int	i;
@@ -228,13 +341,15 @@ int	main(int argc, char **argv)
 	t_data	*data;
 	t_philo	*philo;
 
-	if ((argc != 5 && argc != 6 || !check_input(argv)))
+	if ((argc != 5 && argc != 6) || !check_input(argv))
 	{
 		error_output();
 		exit (0);
 	}
 	philo = malloc (sizeof(t_philo) * ft_atoi(argv[1]));
-	data = parse_data(*argv);
+	data = parse_data(argv);
 	init_philo(philo, data);
 	init_threads(philo, data);
+	free_all(philo);
+	join_threads(philo);
 }
