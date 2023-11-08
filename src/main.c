@@ -6,7 +6,7 @@
 /*   By: kilchenk <kilchenk@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/10/24 16:52:55 by kilchenk          #+#    #+#             */
-/*   Updated: 2023/11/02 19:54:49 by kilchenk         ###   ########.fr       */
+/*   Updated: 2023/11/08 18:24:10 by kilchenk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,7 +18,7 @@ void	join_threads(t_philo *p)
 	int	i;
 
 	i = -1;
-	while (i++ < p->param->philo_nb)
+	while (++i < p->param->philo_nb)
 		pthread_join(p[i].thread, (void *)&p[i]);
 }
 
@@ -28,8 +28,11 @@ void	free_all(t_philo *p)
 	int	i;
 
 	i = -1;
-	while (i++ < p->param->philo_nb)
+	while (++i < p->param->philo_nb)
+	{
 		pthread_mutex_destroy(p[i].forkl);
+		pthread_mutex_destroy(p[i].forkr);
+	}
 	pthread_mutex_destroy(p->param->print);
 	free(p->param->print);
 	free(p->param->fork);
@@ -66,7 +69,7 @@ void	check_treads(t_philo *p)
 	while (!p->param->over)
 	{
 		i = -1;
-		while (i++ < p->param->philo_nb)
+		while (++i < p->param->philo_nb)
 		{
 			if (check_death(&p[i]))
 				p->param->over = 1;
@@ -74,7 +77,6 @@ void	check_treads(t_philo *p)
 		if (p->param->eated == p->param->philo_nb)
 			p->param->over = 1;
 	}
-	return ;
 }
 
 //utils
@@ -169,14 +171,14 @@ void	*routine(void *phil)
 	p = (t_philo *)phil;
 	while (!(p->param->ready))
 		continue ;
-	if (!(p->id % 2))
+	if (p->id % 2)
 		ft_usleep(p->param->eat_time * 0.9 + 1);
 	while (!(p->param->over))
 	{
 		ft_eat(p);
 		pthread_mutex_lock(p->param->print);
-		if (p->param->check_sum && p->iter
-			== p->param->eat_sum)
+		if (p->param->check_sum
+			&& p->iter == p->param->eat_sum)
 		{
 			p->param->eated++;
 			pthread_mutex_unlock(p->param->print);
@@ -206,14 +208,14 @@ uint64_t	current_time(void)
 void	create_threads(t_philo *p)
 {
 	int	i;
-	int	t;
+	uint64_t	t;
 
 	i = -1;
-	while (i++ < p->param->philo_nb)
+	while (++i < p->param->philo_nb)
 		pthread_create(&p[i].thread, NULL, &routine, &p[i]);
 	i = -1;
 	t = current_time();
-	while (i++ < p->param->philo_nb)
+	while (++i < p->param->philo_nb)
 	{
 		p[i].start = t;
 		p[i].meal = t;
@@ -227,11 +229,18 @@ void	init_threads(t_philo *p, t_data *param)
 	int	i;
 
 	i = -1;
-	while (i++ < param->philo_nb)
+	while (++i < param->philo_nb)
+	{
 		pthread_mutex_init(p[i].forkl, NULL);
+		pthread_mutex_init(p[i].forkr, NULL);
+	}
 	pthread_mutex_init(param->print, NULL);
 	create_threads(p);
 	check_treads(p);
+	// if (check_treads(p, nb) == 1);
+	// {
+		
+	// }
 }
 
 //parse
@@ -240,17 +249,24 @@ void	init_philo(t_philo *p, t_data *param)
 	int	i;
 
 	i = -1;
-	while (i++ < param->philo_nb)
+	while (++i < param->philo_nb)
 	{
 		p[i].start = 0;
 		p[i].id = i + 1;
 		p[i].thread = 0;
 		p[i].meal = 0;
 		p[i].forkl = &param->fork[i];
+		p[i].forkr = &param->fork[i];
 		if (p[i].id == param->philo_nb)
-			p[i].forkr = &param->fork[0];
+		{
+			p[i].forkl = &param->fork[0];
+			p[i].forkr = &param->fork[1];
+		}
 		else
-			p[i].forkr = &param->fork[i + 1];
+		{
+			p[i].forkl = &param->fork[i + 1];
+			p[i].forkr = &param->fork[i + 2];
+		}
 		p[i].param = param;
 		p[i].iter = 0;
 	}
@@ -270,11 +286,10 @@ t_data	*parse_data(char **argv)
 	param->fork = malloc(sizeof(pthread_mutex_t) * ft_atoi(argv[1]));
 	if (param->fork == NULL)
 		return (NULL);
-	return (param);
 	param->dead_time = ft_atoi(argv[2]);
 	param->eat_time = ft_atoi(argv[3]);
-	param->sleep_time = ft_atoi(argv[4]);
 	param->check_sum = 0;
+	param->sleep_time = ft_atoi(argv[4]);
 	param->eated = 0;
 	if (argv[5])
 	{
@@ -329,8 +344,7 @@ int	check_input(char **argv)
 		i++;
 	}
 	if (ft_atoi(argv[1]) <= 0 || ft_atoi(argv[2]) <= 0
-		|| ft_atoi(argv[3]) <= 0 || ft_atoi(argv[4]) <= 0
-		|| (ft_atoi(argv[5]) <= 0 && argv[5]))
+		|| ft_atoi(argv[3]) <= 0 || ft_atoi(argv[4]) <= 0)
 		return (0);
 	return (1);
 }
@@ -344,12 +358,44 @@ int	main(int argc, char **argv)
 	if ((argc != 5 && argc != 6) || !check_input(argv))
 	{
 		error_output();
-		exit (0);
+		return (0);
 	}
-	philo = malloc (sizeof(t_philo) * ft_atoi(argv[1]));
+	philo = malloc(sizeof(t_philo) * ft_atoi(argv[1]));
+	// if (ft_atoi(argv[1]) == 1)
+	// {
+	// 	printf("%s has taken left fork%s\n", PURPLE, RESET);
+	// 	return (0);
+	// }
 	data = parse_data(argv);
 	init_philo(philo, data);
+	// if (ft_atoi(argv[1]) == 1)
+	// {
+	// 	print(philo, 1);
+	// 	return (0);
+	// }
 	init_threads(philo, data);
-	free_all(philo);
 	join_threads(philo);
+	free_all(philo);
 }
+
+//parse
+// void	init_mutex(t_philo *p, t_data *param)
+// {
+// 	int	i;
+
+// 	i = -1;
+// 	while (++i < param->philo_nb)
+// 	{
+// 		pthread_mutex_init(p[i].forkl, NULL);
+// 		pthread_mutex_init(p[i].forkr, NULL);
+// 	}
+// 	pthread_mutex_init(param->print, NULL);
+// }
+
+// //parse
+// void	init_threads(t_philo *p, t_data *param)
+// {
+// 	init_mutex(p, param);
+// 	create_threads(p);
+// 	check_treads(p);
+// }
