@@ -6,7 +6,7 @@
 #    By: kilchenk <kilchenk@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/10/24 16:50:44 by kilchenk          #+#    #+#              #
-#    Updated: 2023/11/02 19:59:57 by kilchenk         ###   ########.fr        #
+#    Updated: 2023/11/08 19:53:04 by kilchenk         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -16,7 +16,7 @@ SRC = src
 OBJ = $(SRCS:.c=.o)
 
 INC = inc
-CFLAGS = -Wextra -Werror -Wall -pthread #-fsanitize=address -g -I $(INC)
+CFLAGS = -Wextra -Werror -Wall -pthread -fsanitize=address -g -I $(INC)
 #DEBUG_SEG_FAULTS = -fsanitize=address #for segfault checking
 SRCS = src/main.c
 RM = rm -rf
@@ -32,7 +32,7 @@ all: $(NAME)
 	@echo "\033[0;35m••••\033[0m\c"
 
 $(NAME): $(OBJ) $(SRC)
-		@$(CC) $(OBJ) -o $(NAME)
+		@$(CC) $(OBJ) -o $(NAME) $(CFLAGS)
 		
 clean:
 	@$(RM) $(OBJ)

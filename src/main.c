@@ -6,7 +6,7 @@
 /*   By: kilchenk <kilchenk@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/10/24 16:52:55 by kilchenk          #+#    #+#             */
-/*   Updated: 2023/11/08 18:24:10 by kilchenk         ###   ########.fr       */
+/*   Updated: 2023/11/09 16:44:32 by kilchenk         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,7 +31,7 @@ void	free_all(t_philo *p)
 	while (++i < p->param->philo_nb)
 	{
 		pthread_mutex_destroy(p[i].forkl);
-		pthread_mutex_destroy(p[i].forkr);
+		// pthread_mutex_destroy(p[i].forkr);
 	}
 	pthread_mutex_destroy(p->param->print);
 	free(p->param->print);
@@ -77,6 +77,7 @@ void	check_treads(t_philo *p)
 		if (p->param->eated == p->param->philo_nb)
 			p->param->over = 1;
 	}
+	return ;
 }
 
 //utils
@@ -107,7 +108,7 @@ int	ft_atoi(const char *nptr)
 	return (sum);
 }
 
-//utils
+//utils 
 void	print(t_philo *p, int i)
 {
 	pthread_mutex_lock(p->param->print);
@@ -117,7 +118,7 @@ void	print(t_philo *p, int i)
 		return ;
 	}
 	if (i == 1)
-		printf("%s%llu %d has taken left fork%s\n", PURPLE,
+		printf("%s%llu %d has taken fork%s\n", PURPLE,
 			current_time() - p->start, p->id, RESET);
 	else if (i == 2)
 		printf("%s%llu %d is eatting%s\n", GREEN, current_time() - p->start,
@@ -131,9 +132,9 @@ void	print(t_philo *p, int i)
 	else if (i == 5)
 		printf("%s%llu %d died %s\n", RED, current_time() - p->start,
 			p->id, RESET);
-	else if (i == 6)
-		printf("%s%llu %d has taken right fork%s\n", PINK,
-			current_time() - p->start, p->id, RESET);
+	else if (i == 6) //!!!!
+		printf("%s%llu %d has taken right fork%s\n", PINK, //!!!!
+			current_time() - p->start, p->id, RESET); //!!!!
 	pthread_mutex_unlock(p->param->print);
 }
 
@@ -207,8 +208,8 @@ uint64_t	current_time(void)
 //parse
 void	create_threads(t_philo *p)
 {
-	int	i;
-	uint64_t	t;
+	int			i;
+	long int	t;
 
 	i = -1;
 	while (++i < p->param->philo_nb)
@@ -232,7 +233,7 @@ void	init_threads(t_philo *p, t_data *param)
 	while (++i < param->philo_nb)
 	{
 		pthread_mutex_init(p[i].forkl, NULL);
-		pthread_mutex_init(p[i].forkr, NULL);
+		// pthread_mutex_init(p[i].forkr, NULL); //!!!!
 	}
 	pthread_mutex_init(param->print, NULL);
 	create_threads(p);
@@ -256,16 +257,16 @@ void	init_philo(t_philo *p, t_data *param)
 		p[i].thread = 0;
 		p[i].meal = 0;
 		p[i].forkl = &param->fork[i];
-		p[i].forkr = &param->fork[i];
+		// p[i].forkr = &param->fork[i]; //!!!!
 		if (p[i].id == param->philo_nb)
 		{
-			p[i].forkl = &param->fork[0];
-			p[i].forkr = &param->fork[1];
+			// p[i].forkl = &param->fork[1]; //!!!!
+			p[i].forkr = &param->fork[0];
 		}
 		else
 		{
-			p[i].forkl = &param->fork[i + 1];
-			p[i].forkr = &param->fork[i + 2];
+			// p[i].forkl = &param->fork[i + 2]; //!!!!
+			p[i].forkr = &param->fork[i + 1];
 		}
 		p[i].param = param;
 		p[i].iter = 0;
@@ -344,7 +345,8 @@ int	check_input(char **argv)
 		i++;
 	}
 	if (ft_atoi(argv[1]) <= 0 || ft_atoi(argv[2]) <= 0
-		|| ft_atoi(argv[3]) <= 0 || ft_atoi(argv[4]) <= 0)
+		|| ft_atoi(argv[3]) <= 0 || ft_atoi(argv[4]) <= 0
+		|| (argv[5] && ft_atoi(argv[5]) <= 0))
 		return (0);
 	return (1);
 }
