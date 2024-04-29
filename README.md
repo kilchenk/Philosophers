@@ -30,10 +30,10 @@ Than, run ```./philosopher Help``` and follow instructions!
 
 The case of all Pfilosophers being alvie
 
-![gif](infinity.gif)
+<img src="./infinity.gif" width="1600" height="500"/>
 
 The case when one of the Pfilosophers die
 
-![gif](normal.gif)
+<img src="./normal.gif" width="1600" height="500"/>
 
 For more check the [subject](subject.pdf)
